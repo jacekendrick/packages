@@ -7,8 +7,11 @@ package io.flutter.plugins.videoplayer.platformview;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.annotation.VisibleForTesting;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import io.flutter.plugins.videoplayer.ExoPlayerEventListener;
 import io.flutter.plugins.videoplayer.VideoAsset;
@@ -41,6 +44,7 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
    * @return a video player instance.
    */
   @NonNull
+  @OptIn(markerClass = UnstableApi.class)
   public static PlatformViewVideoPlayer create(
       @NonNull Context context,
       @NonNull VideoPlayerCallbacks events,
@@ -53,6 +57,13 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
         () -> {
           ExoPlayer.Builder builder =
               new ExoPlayer.Builder(context)
+                  // Relay patch: fall back to the next available decoder (including
+                  // the software decoder) when the preferred hardware decoder fails
+                  // to initialize. Some devices (notably Huawei/Kirin and budget
+                  // MediaTek) fail hardware AVC decoder init on streams they
+                  // nominally support.
+                  .setRenderersFactory(
+                      new DefaultRenderersFactory(context).setEnableDecoderFallback(true))
                   .setMediaSourceFactory(asset.getMediaSourceFactory(context));
           return builder.build();
         });
